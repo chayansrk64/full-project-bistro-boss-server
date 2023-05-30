@@ -29,17 +29,51 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
+    const usersCollection = client.db('bistroDB').collection('users');
     const menuCollection = client.db('bistroDB').collection('menu');
     const reviewCollection = client.db('bistroDB').collection('reviews');
     const cartCollection = client.db('bistroDB').collection('carts');
 
-     // menu
+
+    // users Api
+    app.get('/users', async(req, res) => {
+        const result = await usersCollection.find().toArray();
+        res.send(result)
+    })
+
+
+    app.post('/users', async(req, res) => {
+       const user = req.body;
+       console.log(user);
+       const query = {email: user.email};
+       const existingUser = await usersCollection.findOne(query);
+       console.log('existing user', existingUser);
+       if(existingUser){
+         return res.send({message: 'User Already Exist'})
+       }
+       const result = await usersCollection.insertOne(user);
+       res.send(result);
+    })
+
+    app.patch('/users/admin/:id', async(req, res) => {
+        const id = req.params.id;
+        const query = {_id: new ObjectId(id)};
+        const updateDoc = {
+          $set: {
+            role: "Admin"
+          },
+        };
+        const result = await usersCollection.updateOne(query, updateDoc);
+        res.send(result);
+    })
+
+     // menu apis
     app.get('/menu', async(req, res) => {
         const result = await menuCollection.find().toArray();
         res.send(result)
     })
 
-    // reviews
+    // reviews apis
     app.get('/reviews', async(req, res) => {
         const result = await reviewCollection.find().toArray();
         res.send(result)
