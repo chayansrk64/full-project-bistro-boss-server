@@ -91,6 +91,22 @@ async function run() {
         res.send(result);
     })
 
+    // security layers:
+    // 1.verifyJWT
+    // 2.verify email is same
+    // 3.check admin
+
+    app.get('/users/admin/:email', verifyJWT, async(req, res) => {
+        const email = req.params.email;
+        const query = {email: email};
+        if(req.decoded.email !== email){
+          res.send({Admin: false})
+        }
+        const user = await usersCollection.findOne(query);
+        const result = {Admin: user?.role === 'Admin'};
+        res.send(result)
+    })
+
     app.delete('/users/:id', async(req, res) => {
         const id = req.params.id;
         const query = {_id: new ObjectId(id)};
@@ -119,7 +135,7 @@ async function run() {
 
         const decodedEmail = req.decoded.email;
         if(email !== decodedEmail){
-          return res.status(403).send({error:true, message: 'forbiden access!'})
+          return res.status(403).send({error:true, message: 'forbidden access!'})
         }
 
         else{
