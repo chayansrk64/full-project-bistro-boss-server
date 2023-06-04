@@ -88,10 +88,10 @@ async function run() {
 
     app.post('/users', async(req, res) => {
        const user = req.body;
-       console.log(user);
+      //  console.log(user);
        const query = {email: user.email};
        const existingUser = await usersCollection.findOne(query);
-       console.log('existing user', existingUser);
+      //  console.log('existing user', existingUser);
        if(existingUser){
          return res.send({message: 'User Already Exist'})
        }
@@ -196,7 +196,7 @@ async function run() {
     app.post('/create-payment-intent', verifyJWT, async(req, res) => {
         const {price} = req.body;
         const amount = price * 100; 
-        console.log(price, amount);
+        // console.log(price, amount);
         const paymentIntent = await stripe.paymentIntents.create({
           amount: amount,
           currency: 'usd',
@@ -218,6 +218,25 @@ async function run() {
       const deleteResult = await cartCollection.deleteMany(query);
 
       res.send({insertResult, deleteResult})
+    })
+
+
+    // admin statistics
+    app.get('/admin-stats', verifyJWT, verifyAdmin, async(req, res) => {
+        const users = await usersCollection.estimatedDocumentCount();
+        const products = await menuCollection.estimatedDocumentCount();
+        const orders = await paymentCollection.estimatedDocumentCount();
+        const payments = await paymentCollection.find().toArray();
+        const revenue = payments.reduce((sum, payment) => sum + payment.price, 0)
+
+        res.send({
+          revenue,
+          users,
+          products,
+          orders,
+
+
+        })
     })
 
 
