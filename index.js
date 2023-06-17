@@ -2,14 +2,63 @@ const express = require('express');
 const app = express();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
+const nodemailer = require("nodemailer");
+const mg = require('nodemailer-mailgun-transport');
 const jwt = require('jsonwebtoken');
 const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY)
 const cors = require('cors');
 const port = process.env.PORT || 5000;
 
+
+
 //middleware
 app.use(cors());
 app.use(express.json());
+
+// const transporter = nodemailer.createTransport({
+//   host: 'smtp.sendgrid.net',
+//   port: 587,
+//   auth: {
+//       user: "apikey",
+//       pass: process.env.SENDGRID_API_KEY
+//   }
+// })
+
+
+const auth = {
+  auth: {
+    api_key: process.env.EMAIL_PRIVATE_KEY,
+    domain: process.env.EMAIL_DOMAIN
+  }
+}
+
+const transporter = nodemailer.createTransport(mg(auth));
+
+
+
+// send payment confirmation email
+const sendPaymentConfirmationEmail = payment => {
+  transporter.sendMail({
+    from: "chayansrk64@gmail.com", // verified sender email
+    // to: payment.email, // recipient email (=====SOULD BE LIKE========)
+    to:"chayansrk64@gmail.com", // recipient email (=======FOR TEST========= )
+    subject: "Test message subject", // Subject line
+    text: "Hello world!", // plain text body
+    html:  `
+    <div>
+      <h2>Payment Confirm!!!</h2>
+      <p>Transaction id: ${payment.transactionId} </p>
+    </div>
+    `, // html body
+  }, function(error, info){
+    if (error) {
+      console.log(error);
+    } else {
+      console.log('Email sent: ' + info.response);
+    }
+  });
+ 
+}
 
 const verifyJWT = (req, res, next) =>  {
   const authorization = req.headers.authorization;
@@ -195,7 +244,7 @@ async function run() {
     //Create Payment intent
     app.post('/create-payment-intent', verifyJWT, async(req, res) => {
         const {price} = req.body;
-        const amount = parseInt( price * 100); 
+        const amount = parseInt(price * 100); 
         // console.log(price, amount);
         const paymentIntent = await stripe.paymentIntents.create({
           amount: amount,
@@ -216,6 +265,10 @@ async function run() {
 
       const query = {_id: { $in: payment.cartItems.map(id => new ObjectId(id))}}
       const deleteResult = await cartCollection.deleteMany(query);
+
+      // send am email for confirming payment
+      sendPaymentConfirmationEmail(payment)
+
 
       res.send({insertResult, deleteResult})
     })
